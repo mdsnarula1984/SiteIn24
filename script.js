@@ -194,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // ==========================================
-  // 8. CONTACT FORM SUBMISSION ENHANCEMENT
+  // 8. CONTACT FORM SUBMISSION ENHANCEMENT (WEB3FORMS API)
   // ==========================================
   const form = document.getElementById('projectInquiryForm');
   const successBanner = document.getElementById('formSuccessBanner');
@@ -210,9 +210,9 @@ document.addEventListener('DOMContentLoaded', () => {
       inputs.forEach(input => {
         if (!input.value.trim()) {
           isValid = false;
-          input.style.borderColor = '#EF4444'; // Red alert border
+          input.style.borderColor = '#EF4444';
         } else {
-          input.style.borderColor = ''; // Dynamic restore
+          input.style.borderColor = '';
         }
       });
 
@@ -224,27 +224,53 @@ document.addEventListener('DOMContentLoaded', () => {
       submitBtn.disabled = true;
       submitBtn.innerHTML = `<span>Processing Request...</span>`;
 
-      // Simulate API Submission Flow (24-48-hr context)
-      setTimeout(() => {
-        // Reset Form
-        form.reset();
+      // Bundle all inputs automatically (including the hidden access_key)
+      const formData = new FormData(form);
+      const jsonObject = Object.fromEntries(formData);
+      const jsonPayload = JSON.stringify(jsonObject);
+
+      // Send data directly to the Web3Forms submission endpoint
+      fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: jsonPayload
+      })
+      .then(async (response) => {
+        let res = await response.json();
+        
+        // Reset button state
         submitBtn.disabled = false;
         submitBtn.innerHTML = submitBtnText;
 
-        // Display beautiful glowing confirmation banner
-        if (successBanner) {
-          successBanner.style.display = 'block';
-          successBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          
-          // Auto-hide success banner after 8 seconds
-          setTimeout(() => {
-            successBanner.style.display = 'none';
-          }, 8000);
+        if (response.status === 200) {
+          // Success: Reset the input elements
+          form.reset();
+
+          // Display your custom premium success banner
+          if (successBanner) {
+            successBanner.style.display = 'block';
+            successBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            setTimeout(() => {
+              successBanner.style.display = 'none';
+            }, 8000);
+          }
+        } else {
+          console.log(res);
+          alert(res.message || "Something went wrong. Please check your token settings.");
         }
-      }, 1200);
+      })
+      .catch(error => {
+        console.error("Submission Error: ", error);
+        alert("Network error. Please verify your connection and try again.");
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = submitBtnText;
+      });
     });
 
-    // Reset input indicators on user focus
     form.querySelectorAll('input, select, textarea').forEach(el => {
       el.addEventListener('focus', () => {
         el.style.borderColor = '';
